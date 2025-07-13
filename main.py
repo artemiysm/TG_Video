@@ -62,14 +62,26 @@ def progress_hook(d, chat_id):
             except Exception as e:
                 print(f"Ошибка обновления прогресса: {e}")
 
+
 def get_download_options(url, user_path, chat_id):
     """Возвращает параметры скачивания с хуком прогресса"""
+    
+    # Попробуем получить cookies прямо из Chrome
+    try:
+        cj = browser_cookie3.chrome(domain_name='youtube.com')
+    except Exception as e:
+        print(f"❌ Не удалось получить cookies из Chrome: {e}")
+        cj = None
+
     base_options = {
         'outtmpl': os.path.join(user_path, '%(title)s.%(ext)s'),
         'noplaylist': True,
         'quiet': True,
         'progress_hooks': [lambda d: progress_hook(d, chat_id)],
     }
+
+    if cj:
+        base_options['cookiefile'] = cj
 
     # Специальные настройки для TikTok
     if 'tiktok.com' in url:
@@ -86,13 +98,11 @@ def get_download_options(url, user_path, chat_id):
         base_options.update({
             'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
             'merge_output_format': 'mp4',
-            'cookies': 'cookies.txt',
         })
     else:
         base_options['format'] = 'best[ext=mp4]/best'
 
     return base_options
-
 @bot.message_handler(commands=['start'])
 def handle_start(message):
     keyboard = types.ReplyKeyboardMarkup(row_width=1)
@@ -129,15 +139,15 @@ def process_url(message):
             filename = ydl.prepare_filename(info)
 
             # Проверка размера файла
-            file_size = os.path.getsize(filename) / (1024 * 1024)
-            if file_size > 50:
-                os.remove(filename)
-                bot.edit_message_text(
-                    chat_id=chat_id,
-                    message_id=progress_message.message_id,
-                    text=" Видео слишком большое (>50MB). Telegram не позволяет отправить его."
-                )
-                return
+            # file_size = os.path.getsize(filename) / (1024 * 1024)
+            # if file_size > 50:
+            #     os.remove(filename)
+            #     bot.edit_message_text(
+            #         chat_id=chat_id,
+            #         message_id=progress_message.message_id,
+            #         text=" Видео слишком большое (>50MB). Telegram не позволяет отправить его."
+            #     )
+            #     return
 
             # Отправка файла
             with open(filename, 'rb') as video:
